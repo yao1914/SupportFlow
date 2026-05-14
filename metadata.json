@@ -1,0 +1,5 @@
+{
+  "name": "SupportFlow",
+  "description": "A comprehensive customer support ticketing system with user and admin portals, department routing, and priority management.",
+  "requestFramePermissions": []
+}

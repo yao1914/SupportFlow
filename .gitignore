@@ -1,0 +1,17 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+
+# Backend & Machine Learning
+backend/venv/
+backend/__pycache__/
+*.pt
+*.pth
+*.pkl
+models/xlm_tokenizer/
+*.zip
