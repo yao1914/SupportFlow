@@ -102,7 +102,7 @@ export default function App() {
         
         <Route element={user ? <Layout user={user} onLogout={logout} /> : <Navigate to="/login" />}>
           <Route path="/" element={
-            user?.role === 'admin' || user?.role === 'developer' ? <Navigate to="/admin" /> : <UserPortal user={user} tickets={tickets.filter(t => t.userId === user?.uid)} onAddTicket={addTicket} />
+            user?.role === 'admin' || user?.role === 'developer' ? <Navigate to="/admin" /> : <UserPortal user={user} tickets={tickets.filter(t => t.userId === user?.uid)} onAddTicket={addTicket} onUpdateTicket={updateTicket} />
           } />
           <Route path="/admin" element={
             user?.role === 'admin' || user?.role === 'developer' ? <AdminDashboard user={user} tickets={tickets} onUpdateTicket={updateTicket} onDeleteTicket={deleteTicket} /> : <Navigate to="/" />

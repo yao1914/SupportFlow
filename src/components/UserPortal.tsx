@@ -8,15 +8,38 @@ interface UserPortalProps {
   user: UserProfile;
   tickets: Ticket[];
   onAddTicket: (ticket: Omit<Ticket, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  onUpdateTicket: (id: string, updates: Partial<Ticket>) => void;
 }
 
-export default function UserPortal({ user, tickets, onAddTicket }: UserPortalProps) {
+export default function UserPortal({ user, tickets, onAddTicket, onUpdateTicket }: UserPortalProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   
   // Form state
   const [subject, setSubject] = useState('');
   const [description, setDescription] = useState('');
+  const [editingTicket, setEditingTicket] = useState<Ticket | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const openNewTicketModal = () => {
+    setEditingTicket(null);
+    setSubject('');
+    setDescription('');
+    setIsModalOpen(true);
+  };
+
+  const openEditTicketModal = (ticket: Ticket) => {
+    setEditingTicket(ticket);
+    setSubject(ticket.subject);
+    setDescription(ticket.description);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingTicket(null);
+    setSubject('');
+    setDescription('');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,41 +61,55 @@ export default function UserPortal({ user, tickets, onAddTicket }: UserPortalPro
 
       const prediction = await response.json();
 
-      onAddTicket({
-        userId: user.uid,
-        userEmail: user.email,
-        userName: user.displayName,
-        subject,
-        description,
-        status: 'open',
-        priority: prediction.priority as 'low' | 'medium' | 'high',
-        department: prediction.department as 'billing_payments' | 'customer_service' | 'it_technical' | 'product_support',
-        confidenceLevel: {
-          priority: prediction.confidence.priority,
-          department: prediction.confidence.department,
-        },
-      });
+      if (editingTicket) {
+        // Update existing ticket with new text + fresh AI classification
+        onUpdateTicket(editingTicket.id, {
+          subject,
+          description,
+          priority: prediction.priority as 'low' | 'medium' | 'high',
+          department: prediction.department as 'billing_payments' | 'customer_service' | 'it_technical' | 'product_support',
+          confidenceLevel: {
+            priority: prediction.confidence.priority,
+            department: prediction.confidence.department,
+          },
+        });
+      } else {
+        // Create new ticket
+        onAddTicket({
+          userId: user.uid,
+          userEmail: user.email,
+          userName: user.displayName,
+          subject,
+          description,
+          status: 'open',
+          priority: prediction.priority as 'low' | 'medium' | 'high',
+          department: prediction.department as 'billing_payments' | 'customer_service' | 'it_technical' | 'product_support',
+          confidenceLevel: {
+            priority: prediction.confidence.priority,
+            department: prediction.confidence.department,
+          },
+        });
+      }
 
-      setSubject('');
-      setDescription('');
-      setIsModalOpen(false);
+      closeModal();
     } catch (error) {
       console.error('ML Backend error:', error);
-      // Fallback: still create ticket with default values if backend is down
-      onAddTicket({
-        userId: user.uid,
-        userEmail: user.email,
-        userName: user.displayName,
-        subject,
-        description,
-        status: 'open',
-        priority: 'medium',
-        department: 'customer_service',
-        confidenceLevel: { priority: 0, department: 0 },
-      });
-      setSubject('');
-      setDescription('');
-      setIsModalOpen(false);
+      if (editingTicket) {
+        onUpdateTicket(editingTicket.id, { subject, description });
+      } else {
+        onAddTicket({
+          userId: user.uid,
+          userEmail: user.email,
+          userName: user.displayName,
+          subject,
+          description,
+          status: 'open',
+          priority: 'medium',
+          department: 'customer_service',
+          confidenceLevel: { priority: 0, department: 0 },
+        });
+      }
+      closeModal();
     } finally {
       setIsSubmitting(false);
     }
@@ -96,7 +133,7 @@ export default function UserPortal({ user, tickets, onAddTicket }: UserPortalPro
           <p className="text-gray-500">Track and manage your requests</p>
         </div>
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={openNewTicketModal}
           className="inline-flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-xl font-semibold hover:bg-blue-700 transition-colors shadow-sm"
         >
           <Plus className="w-5 h-5" />
@@ -111,7 +148,7 @@ export default function UserPortal({ user, tickets, onAddTicket }: UserPortalPro
             <h3 className="text-lg font-semibold text-gray-900">No tickets yet</h3>
             <p className="text-gray-500 mb-6">Need help? Create your first support ticket.</p>
             <button
-              onClick={() => setIsModalOpen(true)}
+              onClick={openNewTicketModal}
               className="text-blue-600 font-semibold hover:underline"
             >
               Create a ticket now
@@ -122,6 +159,7 @@ export default function UserPortal({ user, tickets, onAddTicket }: UserPortalPro
             <motion.div
               layout
               key={ticket.id}
+              onClick={() => openEditTicketModal(ticket)}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               className="bg-white border border-gray-200 rounded-2xl p-5 hover:shadow-md transition-shadow group cursor-pointer"
@@ -164,9 +202,11 @@ export default function UserPortal({ user, tickets, onAddTicket }: UserPortalPro
               className="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden"
             >
               <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-                <h2 className="text-xl font-bold text-gray-900">Create New Ticket</h2>
+                <h2 className="text-xl font-bold text-gray-900">
+                  {editingTicket ? 'Edit Ticket' : 'Create New Ticket'}
+                </h2>
                 <button 
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={closeModal}
                   className="text-gray-400 hover:text-gray-600"
                 >
                   <Plus className="w-6 h-6 rotate-45" />
@@ -211,7 +251,7 @@ export default function UserPortal({ user, tickets, onAddTicket }: UserPortalPro
                     disabled={isSubmitting}
                     className="flex-1 px-4 py-2.5 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50"
                   >
-                    {isSubmitting ? 'Creating...' : 'Submit Ticket'}
+                    {isSubmitting ? (editingTicket ? 'Updating...' : 'Creating...') : (editingTicket ? 'Update Ticket' : 'Submit Ticket')}
                   </button>
                 </div>
               </form>
