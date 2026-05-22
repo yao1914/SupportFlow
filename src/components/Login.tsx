@@ -72,7 +72,7 @@ export default function Login({ onLogin }: LoginProps) {
             <ShieldCheck className="w-8 h-8 text-blue-600" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-1">SupportFlow</h1>
-          <p className="text-gray-500 text-sm">Offline Testing Mode</p>
+          
         </div>
 
         {error && (
